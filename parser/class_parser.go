@@ -127,7 +127,7 @@ type ClassParser struct {
 }
 
 // NewClassDiagramWithOptions returns a new classParser with which can Render the class diagram of
-// files in the given directory passed in the ClassDiargamOptions. This will also alow for different types of FileSystems
+// files in the given directory passed in the ClassDiagramOptions. This will also alow for different types of FileSystems
 // Passed since it is part of the ClassDiagramOptions as well.
 func NewClassDiagramWithOptions(options *ClassDiagramOptions) (*ClassParser, error) {
 	classParser := &ClassParser{
@@ -275,9 +275,13 @@ func (p *ClassParser) handleFuncDecl(decl *ast.FuncDecl) {
 
 		// Only get in when the function is defined for a structure. Global functions are not needed for class diagram
 		theType, _ := getFieldType(decl.Recv.List[0].Type, p.allImports)
+		fmt.Printf("THE_TYPE: \"%v\"\n", theType)
 		theType = replacePackageConstant(theType, "")
 		if theType[0] == "*"[0] {
 			theType = theType[1:]
+		}
+		if theType == "" {
+			return
 		}
 		structure := p.getOrCreateStruct(theType)
 		if structure.Type == "" {
@@ -335,8 +339,12 @@ func (p *ClassParser) processSpec(spec ast.Spec) {
 	switch v := spec.(type) {
 	case *ast.TypeSpec:
 		typeName = v.Name.Name
+		if typeName == "" || typeName == "*" {
+			return
+		}
 		switch c := v.Type.(type) {
 		case *ast.StructType:
+			fmt.Printf("CLASS \"%v\"\n", typeName)
 			declarationType = "class"
 			handleGenDecStructType(p, typeName, c)
 		case *ast.InterfaceType:
@@ -359,6 +367,9 @@ func (p *ClassParser) processSpec(spec ast.Spec) {
 		}
 	default:
 		// Not needed for class diagrams (Imports, global variables, regular functions, etc)
+		return
+	}
+	if typeName == "" || typeName == "*" {
 		return
 	}
 	p.getOrCreateStruct(typeName).Type = declarationType
@@ -678,8 +689,12 @@ func (p *ClassParser) renderStructFields(structure *Struct, privateFields *LineS
 
 // Returns an initialized struct of the given name or returns the existing one if it was already created
 func (p *ClassParser) getOrCreateStruct(name string) *Struct {
+	if name == "" {
+		panic(fmt.Errorf("empty name"))
+	}
 	result, ok := p.structure[p.currentPackageName][name]
 	if !ok {
+		fmt.Printf("CREATE STRUCT \"%v\"\n", name)
 		result = &Struct{
 			PackageName:         p.currentPackageName,
 			Functions:           make([]*Function, 0),

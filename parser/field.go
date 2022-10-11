@@ -40,6 +40,12 @@ func getFieldType(exp ast.Expr, aliases map[string]string) (string, []string) {
 		return getFuncType(v, aliases)
 	case *ast.Ellipsis:
 		return getEllipsis(v, aliases)
+		//case *ast.IndexExpr:
+		//	return getIndexExpr(v, aliases)
+		//case *ast.IndexListExpr:
+		//	return getListIndexExpr(v, aliases)
+		//default:
+		//	panic(fmt.Errorf("Unknown type: %T", v))
 	}
 	return "", []string{}
 }
@@ -134,6 +140,23 @@ func getFuncType(v *ast.FuncType, aliases map[string]string) (string, []string) 
 func getEllipsis(v *ast.Ellipsis, aliases map[string]string) (string, []string) {
 	t, _ := getFieldType(v.Elt, aliases)
 	return fmt.Sprintf("...%s", t), []string{}
+}
+
+func getIndexExpr(v *ast.IndexExpr, aliases map[string]string) (string, []string) {
+	t, _ := getFieldType(v.Index, aliases)
+	return fmt.Sprintf("[%v]", t), []string{}
+}
+
+func getListIndexExpr(v *ast.IndexListExpr, aliases map[string]string) (string, []string) {
+	exprsAsStrs := make([]string, len(v.Indices))
+	for i, expr := range v.Indices {
+		t, _ := getFieldType(expr, aliases)
+		exprsAsStrs[i] = t
+	}
+
+	joinedStr := strings.Join(exprsAsStrs, ",")
+
+	return fmt.Sprintf("[%v]", joinedStr), []string{}
 }
 
 var globalPrimitives = map[string]struct{}{
